@@ -1,51 +1,56 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import sys
+import signal
 
-def print_stats(file_size, status_counts):
-    """Print the statistics of the file size and status codes."""
-    print("File size: {}".format(file_size))
-    for status_code in sorted(status_counts.keys()):
-        if status_counts[status_code] > 0:
-            print("{}: {}".format(status_code, status_counts[status_code]))
-
-file_size = 0
-status_counts = {
-    200: 0,
-    301: 0,
-    400: 0,
-    401: 0,
-    403: 0,
-    404: 0,
-    405: 0,
-    500: 0
-}
+# Initialize counters
+total_file_size = 0
+status_codes = {200: 0, 301: 0, 400: 0, 401: 0, 403: 0, 404: 0, 405: 0, 500: 0}
 line_count = 0
 
-try:
-    for line in sys.stdin:
+
+def print_stats():
+    """Prints the accumulated statistics"""
+    print(f"File size: {total_file_size}")
+    for code in sorted(status_codes):
+        if status_codes[code] > 0:
+            print(f"{code}: {status_codes[code]}")
+
+
+def signal_handler(sig, frame):
+    """Handles keyboard interruption signal to print stats before exiting"""
+    print_stats()
+    sys.exit(0)
+
+
+# Register the signal handler
+signal.signal(signal.SIGINT, signal_handler)
+
+
+# Read stdin line by line
+for line in sys.stdin:
+    try:
+        # Parse the line
+        parts = line.split()
+        if len(parts) < 7:
+            continue
+
+        ip = parts[0]
+        status_code = int(parts[-2])
+        file_size = int(parts[-1])
+
+        # Update counters
+        total_file_size += file_size
+        if status_code in status_codes:
+            status_codes[status_code] += 1
+
         line_count += 1
 
-        parts = line.split()
-        if len(parts) < 9:
-            continue
-
-        try:
-            file_size += int(parts[-1])
-        except ValueError:
-            continue
-
-        try:
-            status_code = int(parts[-2])
-            if status_code in status_counts:
-                status_counts[status_code] += 1
-        except ValueError:
-            continue
-
+        # Print stats every 10 lines
         if line_count % 10 == 0:
-            print_stats(file_size, status_counts)
+            print_stats()
+    except Exception:
+        continue
 
-except KeyboardInterrupt:
-    print_stats(file_size, status_counts)
-    raise
 
-print_stats(file_size, status_counts)
+# Print stats at the end
+print_stats()
