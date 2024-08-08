@@ -1,5 +1,9 @@
 #!/usr/bin/python3
+""" Module for isWinner function """
+
+
 def isWinner(x, nums):
+    """ won the game function """
     if x < 1 or not nums:
         return None
 
